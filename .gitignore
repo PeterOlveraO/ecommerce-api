@@ -1,3 +1,10 @@
+#basura
 node_modules/
 
+#privado
 .env
+
+#IA
+.gemini/
+.agents/
+skills-lock.json
