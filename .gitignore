@@ -1,10 +1,14 @@
 #basura
 node_modules/
+dist/
 
 #privado
 .env
 
 #IA
 .gemini/
+GEMINI.md
 .agents/
 skills-lock.json
+
+backend_architecture_report.md
