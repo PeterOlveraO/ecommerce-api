@@ -7,6 +7,7 @@ import {
   insertOrder,
   insertOrderItems,
   updateOrderStatus,
+  updateOrderShippingCost,
   type OrderStatus,
   type CreateOrderItemInput,
 } from './order.model.js';
@@ -190,4 +191,14 @@ export const updateStatus = async (id: string, status: OrderStatus) => {
     connection.release();
     throw error;
   }
+};
+
+export const updateShippingCost = async (id: string, shipping_cost: number) => {
+  const order = await findOrderById(id);
+  if (!order) throw new AppError('Orden no encontrada', 404);
+
+  const updated = await updateOrderShippingCost(id, shipping_cost);
+  if (!updated) throw new AppError('No se pudo actualizar el costo de envío', 500);
+
+  return getOrderById(id);
 };

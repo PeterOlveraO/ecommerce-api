@@ -15,6 +15,7 @@ export interface ShopOrder extends RowDataPacket {
   shipping_cost: number;
   total: number;
   notes: string | null;
+  created_at: string;
 }
 
 // Tipo que representa un ítem de orden
@@ -59,7 +60,7 @@ export interface CreateOrderInput {
 export const findAllOrders = async (): Promise<ShopOrder[]> => {
   const [rows] = await pool.query<ShopOrder[]>(
     `SELECT id, customer_id, payment_method_id, status,
-            subtotal, shipping_cost, total, notes
+            subtotal, shipping_cost, total, notes, created_at
      FROM shop_order
      ORDER BY id DESC`
   );
@@ -70,7 +71,7 @@ export const findAllOrders = async (): Promise<ShopOrder[]> => {
 export const findOrdersByCustomerId = async (customer_id: string): Promise<ShopOrder[]> => {
   const [rows] = await pool.query<ShopOrder[]>(
     `SELECT id, customer_id, payment_method_id, status,
-            subtotal, shipping_cost, total, notes
+            subtotal, shipping_cost, total, notes, created_at
      FROM shop_order
      WHERE customer_id = ?
      ORDER BY id DESC`,
@@ -84,7 +85,7 @@ export const findOrderById = async (id: string, connection?: any): Promise<ShopO
   const db = (connection || pool) as typeof pool;
   const [orders] = await db.query<ShopOrder[]>(
     `SELECT id, customer_id, payment_method_id, status,
-            subtotal, shipping_cost, total, notes
+            subtotal, shipping_cost, total, notes, created_at
      FROM shop_order
      WHERE id = ?`,
     [id]
@@ -174,6 +175,20 @@ export const updateOrderStatus = async (
   const [result] = await db.query<ResultSetHeader>(
     `UPDATE shop_order SET status = ? WHERE id = ?`,
     [status, id]
+  );
+  return result.affectedRows > 0;
+};
+
+// Actualiza el costo de envío y el total de una orden (soporta conexión transaccional)
+export const updateOrderShippingCost = async (
+  id: string,
+  shipping_cost: number,
+  connection?: any
+): Promise<boolean> => {
+  const db = (connection || pool) as typeof pool;
+  const [result] = await db.query<ResultSetHeader>(
+    `UPDATE shop_order SET shipping_cost = ?, total = subtotal + ? WHERE id = ?`,
+    [shipping_cost, shipping_cost, id]
   );
   return result.affectedRows > 0;
 };
