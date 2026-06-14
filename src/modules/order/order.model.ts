@@ -16,6 +16,8 @@ export interface ShopOrder extends RowDataPacket {
   total: number;
   notes: string | null;
   created_at: string;
+  customer_first_name?: string;
+  customer_last_name?: string;
 }
 
 // Tipo que representa un ítem de orden
@@ -26,6 +28,7 @@ export interface OrderItem extends RowDataPacket {
   quantity: number;
   unit_price: number;
   line_total: number;
+  product_name?: string;
 }
 
 // Tipo de producto básico para consulta de precio
@@ -59,10 +62,12 @@ export interface CreateOrderInput {
 // Obtiene todas las órdenes (solo admin)
 export const findAllOrders = async (): Promise<ShopOrder[]> => {
   const [rows] = await pool.query<ShopOrder[]>(
-    `SELECT id, customer_id, payment_method_id, status,
-            subtotal, shipping_cost, total, notes, created_at
-     FROM shop_order
-     ORDER BY id DESC`
+    `SELECT o.id, o.customer_id, o.payment_method_id, o.status,
+            o.subtotal, o.shipping_cost, o.total, o.notes, o.created_at,
+            c.first_name as customer_first_name, c.last_name as customer_last_name
+     FROM shop_order o
+     LEFT JOIN customer c ON o.customer_id = c.id
+     ORDER BY o.id DESC`
   );
   return rows;
 };
@@ -70,11 +75,13 @@ export const findAllOrders = async (): Promise<ShopOrder[]> => {
 // Obtiene órdenes filtradas por customer_id (para el cliente autenticado)
 export const findOrdersByCustomerId = async (customer_id: string): Promise<ShopOrder[]> => {
   const [rows] = await pool.query<ShopOrder[]>(
-    `SELECT id, customer_id, payment_method_id, status,
-            subtotal, shipping_cost, total, notes, created_at
-     FROM shop_order
-     WHERE customer_id = ?
-     ORDER BY id DESC`,
+    `SELECT o.id, o.customer_id, o.payment_method_id, o.status,
+            o.subtotal, o.shipping_cost, o.total, o.notes, o.created_at,
+            c.first_name as customer_first_name, c.last_name as customer_last_name
+     FROM shop_order o
+     LEFT JOIN customer c ON o.customer_id = c.id
+     WHERE o.customer_id = ?
+     ORDER BY o.id DESC`,
     [customer_id]
   );
   return rows;
@@ -84,19 +91,23 @@ export const findOrdersByCustomerId = async (customer_id: string): Promise<ShopO
 export const findOrderById = async (id: string, connection?: any): Promise<ShopOrder | null> => {
   const db = (connection || pool) as typeof pool;
   const [orders] = await db.query<ShopOrder[]>(
-    `SELECT id, customer_id, payment_method_id, status,
-            subtotal, shipping_cost, total, notes, created_at
-     FROM shop_order
-     WHERE id = ?`,
+    `SELECT o.id, o.customer_id, o.payment_method_id, o.status,
+            o.subtotal, o.shipping_cost, o.total, o.notes, o.created_at,
+            c.first_name as customer_first_name, c.last_name as customer_last_name
+     FROM shop_order o
+     LEFT JOIN customer c ON o.customer_id = c.id
+     WHERE o.id = ?`,
     [id]
   );
 
   if (!orders[0]) return null;
 
   const [items] = await db.query<OrderItem[]>(
-    `SELECT id, order_id, product_id, quantity, unit_price, line_total
-     FROM order_item
-     WHERE order_id = ?`,
+    `SELECT oi.id, oi.order_id, oi.product_id, oi.quantity, oi.unit_price, oi.line_total,
+            p.name as product_name
+     FROM order_item oi
+     LEFT JOIN product p ON oi.product_id = p.id
+     WHERE oi.order_id = ?`,
     [id]
   );
 

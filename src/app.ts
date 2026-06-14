@@ -12,6 +12,7 @@ import customerRoutes from './modules/customer/customer.routes.js';
 import paymentMethodRoutes from './modules/payment-method/payment_method.routes.js';
 import productRoutes from './modules/product/product.routes.js';
 import orderRoutes from './modules/order/order.routes.js';
+import attributeRouter from './modules/attribute/attribute.routes.js';
 import { register, getMe, updateMe } from './modules/customer/customer.register.controller.js';
 import { register_schema } from './modules/customer/customer.register.service.js';
 import { update_customer_schema } from './modules/customer/customer.service.js';
@@ -37,6 +38,7 @@ app.use('/customers', customerRoutes);
 app.use('/payment-methods', paymentMethodRoutes);
 app.use('/products', productRoutes);
 app.use('/orders', orderRoutes);
+app.use('/attributes', attributeRouter);
 
 // ─── Rutas de cuenta propia ────────────────────────────────────────────────────
 

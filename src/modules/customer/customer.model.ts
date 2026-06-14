@@ -9,6 +9,7 @@ export interface CustomerRecord {
   last_name: string;
   country: string;
   street_address: string;
+  neighborhood: string | null;
   interior_number: string | null;
   exterior_number: string;
   postal_code: string;
@@ -25,6 +26,7 @@ export interface CreateCustomerPayload {
   last_name: string;
   country?: string;
   street_address: string;
+  neighborhood?: string;
   interior_number?: string;
   exterior_number: string;
   postal_code: string;
@@ -39,6 +41,7 @@ export interface UpdateCustomerPayload {
   last_name?: string;
   country?: string;
   street_address?: string;
+  neighborhood?: string;
   interior_number?: string;
   exterior_number?: string;
   postal_code?: string;
@@ -50,7 +53,7 @@ export interface UpdateCustomerPayload {
 // Columnas públicas a seleccionar (excluye is_active del payload de respuesta)
 const SELECT_COLUMNS = `
   id, auth_id, first_name, last_name, country,
-  street_address, interior_number, exterior_number,
+  street_address, neighborhood, interior_number, exterior_number,
   postal_code, city, state, phone, is_active
 `;
 
@@ -87,9 +90,9 @@ export const createCustomer = async (payload: CreateCustomerPayload): Promise<Cu
 
   await pool.query(
     `INSERT INTO customer
-      (id, auth_id, first_name, last_name, country, street_address,
+      (id, auth_id, first_name, last_name, country, street_address, neighborhood,
        interior_number, exterior_number, postal_code, city, state, phone)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       payload.auth_id,
@@ -97,6 +100,7 @@ export const createCustomer = async (payload: CreateCustomerPayload): Promise<Cu
       payload.last_name,
       country,
       payload.street_address,
+      payload.neighborhood ?? null,
       payload.interior_number ?? null,
       payload.exterior_number,
       payload.postal_code,
@@ -120,7 +124,7 @@ export const updateCustomer = async (
 
   // Construye dinámicamente solo los campos enviados
   const updatable: (keyof UpdateCustomerPayload)[] = [
-    'first_name', 'last_name', 'country', 'street_address',
+    'first_name', 'last_name', 'country', 'street_address', 'neighborhood',
     'interior_number', 'exterior_number', 'postal_code', 'city', 'state', 'phone',
   ];
 
