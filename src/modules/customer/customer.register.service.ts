@@ -20,6 +20,7 @@ export const register_schema = z.object({
   last_name:        z.string().min(1, { message: 'Apellido requerido' }).max(100),
   country:          z.string().max(100).optional().default('México'),
   street_address:   z.string().min(1, { message: 'Dirección requerida' }).max(255),
+  neighborhood:     z.string().max(150).optional(),
   interior_number:  z.string().max(50).optional(),
   exterior_number:  z.string().min(1, { message: 'Número exterior requerido' }).max(50),
   postal_code:      z.string().min(1, { message: 'Código postal requerido' }).max(10),
@@ -67,9 +68,9 @@ export const registerService = async (input: RegisterInput) => {
     // 2. Inserta el perfil del cliente
     await connection.query(
       `INSERT INTO customer
-        (id, auth_id, first_name, last_name, country, street_address,
+        (id, auth_id, first_name, last_name, country, street_address, neighborhood,
          interior_number, exterior_number, postal_code, city, state, phone)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         customer_id,
         auth_id,
@@ -77,6 +78,7 @@ export const registerService = async (input: RegisterInput) => {
         input.last_name,
         input.country,
         input.street_address,
+        input.neighborhood ?? null,
         input.interior_number ?? null,
         input.exterior_number,
         input.postal_code,

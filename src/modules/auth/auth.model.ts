@@ -28,10 +28,10 @@ export interface UpdateAuthPayload {
   password?: string;
 }
 
-// Obtiene todos los registros de auth
+// Obtiene todos los registros de auth activos
 export const findAllAuth = async (): Promise<AuthRecord[]> => {
   const [rows] = await pool.query<AuthRecord[] & any[]>(
-    'SELECT id, email, phone, role, created_at, updated_at FROM auth ORDER BY created_at DESC'
+    'SELECT id, email, phone, role, created_at, updated_at FROM auth WHERE is_active = 1 ORDER BY created_at DESC'
   );
   return rows;
 };
@@ -110,17 +110,17 @@ export const updateAuth = async (
   return findAuthById(id);
 };
 
-// Elimina un registro auth de forma permanente (cascada a customer)
+// Elimina un registro auth de forma lógica (soft delete)
 export const deleteAuth = async (id: string): Promise<void> => {
-  await pool.query('DELETE FROM auth WHERE id = ?', [id]);
+  await pool.query('UPDATE auth SET is_active = 0 WHERE id = ?', [id]);
 };
 
-// Busca un registro auth por email o teléfono (para login) — incluye password
+// Busca un registro auth activo por email o teléfono (para login) — incluye password
 export const findAuthByEmailOrPhone = async (
   identifier: string
 ): Promise<AuthRecord | null> => {
   const [rows] = await pool.query<AuthRecord[] & any[]>(
-    'SELECT * FROM auth WHERE email = ? OR phone = ?',
+    'SELECT * FROM auth WHERE (email = ? OR phone = ?) AND is_active = 1',
     [identifier, identifier]
   );
   return rows[0] ?? null;

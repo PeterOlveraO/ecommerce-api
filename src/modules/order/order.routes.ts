@@ -7,6 +7,7 @@ import {
   getOrder,
   createOrderHandler,
   updateOrderStatusHandler,
+  updateOrderShippingCostHandler,
 } from './order.controller.js';
 
 const router = Router();
@@ -34,6 +35,11 @@ const update_status_schema = z.object({
   }),
 });
 
+// Schema de validación para actualizar el costo de envío
+const update_shipping_schema = z.object({
+  shipping_cost: z.number().min(0, 'El costo de envío debe ser mayor o igual a 0'),
+});
+
 // GET /orders — requiere autenticación
 router.get('/', authMiddleware, listOrders);
 
@@ -50,6 +56,15 @@ router.put(
   requireAdmin,
   validate(update_status_schema),
   updateOrderStatusHandler
+);
+
+// PUT /orders/:id/shipping — solo admins
+router.put(
+  '/:id/shipping',
+  authMiddleware,
+  requireAdmin,
+  validate(update_shipping_schema),
+  updateOrderShippingCostHandler
 );
 
 export default router;

@@ -5,6 +5,7 @@ import {
   getOrderById,
   createOrder,
   updateStatus,
+  updateShippingCost,
 } from './order.service.js';
 
 // GET /orders — admin ve todas las órdenes, cliente solo las suyas
@@ -32,4 +33,10 @@ export const createOrderHandler = async (req: Request, res: Response) => {
 export const updateOrderStatusHandler = async (req: Request, res: Response) => {
   const order = await updateStatus(req.params.id as string, req.body.status);
   successResponse(res, order, 'Estado de la orden actualizado correctamente');
+};
+
+// PUT /orders/:id/shipping — actualiza el costo de envío de la orden
+export const updateOrderShippingCostHandler = async (req: Request, res: Response) => {
+  const order = await updateShippingCost(req.params.id as string, req.body.shipping_cost);
+  successResponse(res, order, 'Costo de envío actualizado correctamente');
 };

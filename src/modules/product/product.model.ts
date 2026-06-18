@@ -12,9 +12,10 @@ export interface Product extends RowDataPacket {
   sale_price: number | null;
   stock: number;
   details: unknown;
-  image_url: string;
+  image_url: string | null;
   display_order: number;
   is_active: boolean;
+  featured: boolean;
 }
 
 // Tipo para crear un producto nuevo
@@ -26,8 +27,9 @@ export interface CreateProductInput {
   sale_price?: number;
   stock?: number;
   details?: unknown;
-  image_url: string;
+  image_url?: string | null;
   display_order: number;
+  featured?: boolean;
   category_ids?: string[];
 }
 
@@ -40,8 +42,9 @@ export interface UpdateProductInput {
   sale_price?: number;
   stock?: number;
   details?: unknown;
-  image_url?: string;
+  image_url?: string | null;
   display_order?: number;
+  featured?: boolean;
   category_ids?: string[];
 }
 
@@ -79,7 +82,7 @@ export const findProductsPaginated = async (
 
   const [rows] = await pool.query<Product[]>(
     `SELECT p.id, p.name, p.brand, p.description, p.price, p.sale_price,
-            p.stock, p.details, p.image_url, p.display_order, p.is_active
+            p.stock, p.details, p.image_url, p.display_order, p.is_active, p.featured
      FROM product p
      ${category_join}
      ${where}
@@ -126,7 +129,7 @@ export const findProductById = async (id: string): Promise<Product | null> => {
   const [rows] = await pool.query<Product[]>(
     `SELECT
        p.id, p.name, p.brand, p.description, p.price, p.sale_price,
-       p.stock, p.details, p.image_url, p.display_order, p.is_active,
+       p.stock, p.details, p.image_url, p.display_order, p.is_active, p.featured,
        JSON_ARRAYAGG(
          IF(c.id IS NOT NULL, JSON_OBJECT('id', c.id, 'name', c.name), NULL)
        ) AS categories
@@ -148,8 +151,8 @@ export const insertProduct = async (
   await pool.query<ResultSetHeader>(
     `INSERT INTO product
        (id, name, brand, description, price, sale_price, stock,
-        details, image_url, display_order)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        details, image_url, display_order, featured)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.name,
@@ -159,8 +162,9 @@ export const insertProduct = async (
       input.sale_price ?? null,
       input.stock ?? 0,
       input.details ? JSON.stringify(input.details) : null,
-      input.image_url,
+      input.image_url ?? null,
       input.display_order,
+      input.featured ? 1 : 0,
     ]
   );
   return id;
@@ -184,6 +188,7 @@ export const updateProduct = async (
   if (input.details !== undefined) { fields.push('details = ?'); values.push(JSON.stringify(input.details)); }
   if (input.image_url !== undefined) { fields.push('image_url = ?'); values.push(input.image_url); }
   if (input.display_order !== undefined) { fields.push('display_order = ?'); values.push(input.display_order); }
+  if (input.featured !== undefined) { fields.push('featured = ?'); values.push(input.featured ? 1 : 0); }
 
   if (fields.length === 0) return false;
 

@@ -21,8 +21,9 @@ const create_product_schema = z.object({
   sale_price: z.number().positive().optional(),
   stock: z.number().int().min(0).optional(),
   details: z.unknown().optional(),
-  image_url: z.string().url('La URL de la imagen no es válida').max(255),
+  image_url: z.string().url('La URL de la imagen no es válida').max(255).nullable().optional(),
   display_order: z.number().int().min(0),
+  featured: z.boolean().optional().default(false),
   category_ids: z.array(z.string().uuid()).optional(),
 }).refine(
   (data) => data.sale_price === undefined || data.sale_price < data.price,
@@ -38,8 +39,9 @@ const update_product_schema = z.object({
   sale_price: z.number().positive().optional(),
   stock: z.number().int().min(0).optional(),
   details: z.unknown().optional(),
-  image_url: z.string().url().max(255).optional(),
+  image_url: z.string().url().max(255).nullable().optional(),
   display_order: z.number().int().min(0).optional(),
+  featured: z.boolean().optional(),
   category_ids: z.array(z.string().uuid()).optional(),
 });
 
