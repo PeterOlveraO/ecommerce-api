@@ -30,7 +30,7 @@ const main = async () => {
     const admin_id = generateId();
     await pool.query(
       `INSERT INTO auth (id, email, password, role) VALUES (?, ?, ?, ?)`,
-      [admin_id, 'admin@ecommerceangel.mx', hashed_admin, 'admin']
+      [admin_id, 'admin@ecommerce.mx', hashed_admin, 'admin']
     );
 
     const customers_data = [
@@ -103,7 +103,7 @@ const main = async () => {
       pm_ids.push(id);
       await pool.query(
         `INSERT INTO payment_method (id, method, bank, account_number, account_holder) VALUES (?, ?, ?, ?, ?)`,
-        [id, pm.m, pm.b, '012345678901234567', 'Ecommerce Angel SA']
+        [id, pm.m, pm.b, '012345678901234567', 'Ecommerce SA']
       );
     }
     console.log(`✅ 10 Métodos de pago insertados`);
@@ -172,7 +172,7 @@ const main = async () => {
 
     console.log('\n🎉 Seed completado exitosamente.\n');
     console.log('Credenciales de prueba:');
-    console.log('  Admin:    admin@ecommerceangel.mx  / Admin123!');
+    console.log('  Admin:    admin@ecommerce.mx  / Admin123!');
     console.log('  Cliente:  juan.perez@gmail.com     / Cliente123!');
 
     await pool.end();
