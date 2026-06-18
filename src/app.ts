@@ -26,9 +26,11 @@ import { update_customer_schema } from "./modules/customer/customer.service.js";
 const app = express();
 
 const allowed_origins = [
+  "https://vapezone.com.mx",
   "https://www.vapezone.com.mx",
-  "https://www.vapezone.com.mx",
+  "https://admonvapezone.vapezone.com.mx",
   "https://www.admonvapezone.vapezone.com.mx",
+  "http://localhost:4321",
   // Dominio temporal de Hostinger (mientras el dominio personalizado propaga)
   "https://floralwhite-wombat-793465.hostingersite.com",
 ];
@@ -40,6 +42,10 @@ app.use(
     origin: (origin, callback) => {
       // Permite peticiones sin origin (Postman, curl, server-to-server)
       if (!origin) return callback(null, true);
+      // Permite desarrollo local dinámicamente sin importar el puerto
+      if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) {
+        return callback(null, true);
+      }
       if (allowed_origins.includes(origin)) {
         return callback(null, true);
       }
