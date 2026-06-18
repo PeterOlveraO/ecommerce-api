@@ -8,7 +8,7 @@ export const getAll = async (_req: Request, res: Response) => {
 };
 
 export const getById = async (req: Request, res: Response) => {
-  const attribute = await AttributeService.getById(req.params.id);
+  const attribute = await AttributeService.getById(String(req.params.id));
   return successResponse(res, attribute, 'Atributo obtenido');
 };
 
@@ -18,11 +18,11 @@ export const create = async (req: Request, res: Response) => {
 };
 
 export const update = async (req: Request, res: Response) => {
-  const attribute = await AttributeService.update(req.params.id, req.body);
+  const attribute = await AttributeService.update(String(req.params.id), req.body);
   return successResponse(res, attribute, 'Atributo actualizado');
 };
 
 export const remove = async (req: Request, res: Response) => {
-  await AttributeService.remove(req.params.id);
+  await AttributeService.remove(String(req.params.id));
   return successResponse(res, null, 'Atributo eliminado');
 };

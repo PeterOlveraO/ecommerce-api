@@ -39,7 +39,8 @@ app.get('/health', (_req, res) => {
 app.get('/env-check', (_req, res) => {
   // Solo disponible en entorno de desarrollo
   if (process.env.NODE_ENV !== 'development') {
-    return res.status(403).json({ success: false, message: 'No disponible en producción' });
+    res.status(403).json({ success: false, message: 'No disponible en producción' });
+    return;
   }
 
   // Verifica si la variable existe (sin importar su contenido)
