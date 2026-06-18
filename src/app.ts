@@ -21,9 +21,27 @@ import { update_customer_schema } from './modules/customer/customer.service.js';
 
 const app = express();
 
+const allowed_origins = [
+  'https://vapezone.com.mx',
+  'https://www.vapezone.com.mx',
+  'https://admonvapezone.vapezone.com.mx',
+];
+
 // Middlewares de seguridad y utilidad
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
-app.use(cors());
+app.use(cors({
+  origin: (origin, callback) => {
+    // Permite peticiones sin origin (Postman, curl, server-to-server)
+    if (!origin) return callback(null, true);
+    if (allowed_origins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS: origen no permitido: ${origin}`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(morgan('dev'));
 app.use(express.json());
 
@@ -34,7 +52,6 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
-
 
 // Registro de módulos
 app.use('/categories', categoryRouter);
