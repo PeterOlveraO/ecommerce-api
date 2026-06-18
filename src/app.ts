@@ -25,6 +25,8 @@ const allowed_origins = [
   'https://vapezone.com.mx',
   'https://www.vapezone.com.mx',
   'https://admonvapezone.vapezone.com.mx',
+  // Dominio temporal de Hostinger (mientras el dominio personalizado propaga)
+  'https://floralwhite-wombat-793465.hostingersite.com',
 ];
 
 // Middlewares de seguridad y utilidad
