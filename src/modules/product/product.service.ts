@@ -60,6 +60,11 @@ export const createProduct = async (input: CreateProductInput) => {
     await insertProductCategories(id, category_ids);
   }
 
+  if (input.variants) {
+    const { replaceProductVariants } = await import('./product.model.js');
+    await replaceProductVariants(id, input.variants);
+  }
+
   return getProductById(id);
 };
 
@@ -81,6 +86,11 @@ export const updateProductById = async (
     if (category_ids.length > 0) {
       await insertProductCategories(id, category_ids);
     }
+  }
+
+  if (input.variants !== undefined) {
+    const { replaceProductVariants } = await import('./product.model.js');
+    await replaceProductVariants(id, input.variants);
   }
 
   if (!updated && category_ids === undefined) {

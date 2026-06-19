@@ -13,11 +13,12 @@ import {
 } from './order.model.js';
 import { findCustomerByAuthId } from '../customer/customer.model.js';
 import { pool } from '../../config/db.js';
-import { updateProductStock } from '../product/product.model.js';
+import { updateProductStock, findProductVariantById, updateProductVariantStock } from '../product/product.model.js';
 
 // Tipo de ítem que llega en el body de la solicitud
 interface OrderItemBody {
   product_id: string;
+  variant_id?: string;
   quantity: number;
 }
 
@@ -97,15 +98,33 @@ export const createOrder = async (body: CreateOrderBody) => {
       if (!product.is_active) {
         throw new AppError(`El producto "${product.name}" no está disponible`, 400);
       }
-      if (product.stock < item.quantity) {
-        throw new AppError(
-          `Stock insuficiente para "${product.name}". Disponible: ${product.stock}`,
-          400
-        );
-      }
 
-      // Descuenta el stock del producto usando la misma conexión transaccional
-      await updateProductStock(item.product_id, -item.quantity, connection);
+      if (item.variant_id) {
+        const variant = await findProductVariantById(item.variant_id, connection, true);
+        if (!variant) {
+          throw new AppError(`Variante ${item.variant_id} no encontrada para el producto "${product.name}"`, 404);
+        }
+        if (!variant.is_active) {
+          throw new AppError(`La variante seleccionada no está disponible`, 400);
+        }
+        if (variant.stock < item.quantity) {
+          throw new AppError(
+            `Stock insuficiente para la variante de "${product.name}". Disponible: ${variant.stock}`,
+            400
+          );
+        }
+        // Descuenta el stock de la variante usando la misma conexión transaccional
+        await updateProductVariantStock(item.variant_id, -item.quantity, connection);
+      } else {
+        if (product.stock < item.quantity) {
+          throw new AppError(
+            `Stock insuficiente para "${product.name}". Disponible: ${product.stock}`,
+            400
+          );
+        }
+        // Descuenta el stock del producto usando la misma conexión transaccional
+        await updateProductStock(item.product_id, -item.quantity, connection);
+      }
 
       // Usa sale_price si está disponible, de lo contrario usa price
       const unit_price = product.sale_price ?? product.price;
@@ -114,6 +133,7 @@ export const createOrder = async (body: CreateOrderBody) => {
       subtotal += line_total;
       resolved_items.push({
         product_id: item.product_id,
+        variant_id: item.variant_id,
         quantity: item.quantity,
         unit_price,
         line_total,
@@ -175,7 +195,11 @@ export const updateStatus = async (id: string, status: OrderStatus) => {
     if (status === 'cancelled') {
       const items = (order as any).items || [];
       for (const item of items) {
-        await updateProductStock(item.product_id, item.quantity, connection);
+        if (item.variant_id) {
+          await updateProductVariantStock(item.variant_id, item.quantity, connection);
+        } else {
+          await updateProductStock(item.product_id, item.quantity, connection);
+        }
       }
     }
 

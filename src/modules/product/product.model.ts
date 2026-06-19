@@ -16,6 +16,7 @@ export interface Product extends RowDataPacket {
   display_order: number;
   is_active: boolean;
   featured: boolean;
+  variants?: any[];
 }
 
 // Tipo para crear un producto nuevo
@@ -31,6 +32,13 @@ export interface CreateProductInput {
   display_order: number;
   featured?: boolean;
   category_ids?: string[];
+  variants?: Array<{
+    id?: string;
+    stock: number;
+    variante1: string;
+    variante2?: string | null;
+    is_active?: boolean;
+  }>;
 }
 
 // Tipo para actualizar un producto (todos los campos opcionales)
@@ -46,6 +54,13 @@ export interface UpdateProductInput {
   display_order?: number;
   featured?: boolean;
   category_ids?: string[];
+  variants?: Array<{
+    id?: string;
+    stock: number;
+    variante1: string;
+    variante2?: string | null;
+    is_active?: boolean;
+  }>;
 }
 
 // Parámetros de paginación y filtros para el listado de productos
@@ -82,7 +97,8 @@ export const findProductsPaginated = async (
 
   const [rows] = await pool.query<Product[]>(
     `SELECT p.id, p.name, p.brand, p.description, p.price, p.sale_price,
-            p.stock, p.details, p.image_url, p.display_order, p.is_active, p.featured
+            COALESCE((SELECT SUM(stock) FROM product_variant WHERE product_id = p.id AND is_active = 1), p.stock) AS stock,
+            p.details, p.image_url, p.display_order, p.is_active, p.featured
      FROM product p
      ${category_join}
      ${where}
@@ -124,12 +140,13 @@ export const countProducts = async (
   return rows[0].total;
 };
 
-// Obtiene un producto por ID junto con sus categorías
+// Obtiene un producto por ID junto con sus categorías y variantes
 export const findProductById = async (id: string): Promise<Product | null> => {
   const [rows] = await pool.query<Product[]>(
     `SELECT
        p.id, p.name, p.brand, p.description, p.price, p.sale_price,
-       p.stock, p.details, p.image_url, p.display_order, p.is_active, p.featured,
+       COALESCE((SELECT SUM(stock) FROM product_variant WHERE product_id = p.id AND is_active = 1), p.stock) AS stock,
+       p.details, p.image_url, p.display_order, p.is_active, p.featured,
        JSON_ARRAYAGG(
          IF(c.id IS NOT NULL, JSON_OBJECT('id', c.id, 'name', c.name), NULL)
        ) AS categories
@@ -140,7 +157,15 @@ export const findProductById = async (id: string): Promise<Product | null> => {
      GROUP BY p.id`,
     [id]
   );
-  return rows[0] ?? null;
+  const product = rows[0] ?? null;
+  if (!product) return null;
+
+  const [variants] = await pool.query<RowDataPacket[]>(
+    `SELECT id, stock, variante1, variante2, is_active FROM product_variant WHERE product_id = ?`,
+    [id]
+  );
+  product.variants = variants.map(v => ({ ...v, is_active: Boolean(v.is_active) })) as any[];
+  return product;
 };
 
 // Inserta un producto nuevo y retorna su ID
@@ -243,4 +268,72 @@ export const updateProductStock = async (
   );
   return result.affectedRows > 0;
 };
+
+// --- Product Variant ---
+
+export interface ProductVariant extends RowDataPacket {
+  id: string;
+  product_id: string;
+  stock: number;
+  variante1: string;
+  variante2: string | null;
+  is_active: boolean;
+}
+
+export const findProductVariantById = async (
+  variant_id: string,
+  connection?: any,
+  lock: boolean = false
+): Promise<ProductVariant | null> => {
+  const db = (connection || pool) as typeof pool;
+  const lock_clause = lock ? ' FOR UPDATE' : '';
+  const [rows] = await db.query<ProductVariant[]>(
+    `SELECT id, product_id, stock, variante1, variante2, is_active
+     FROM product_variant
+     WHERE id = ?${lock_clause}`,
+    [variant_id]
+  );
+  return rows[0] ?? null;
+};
+
+export const updateProductVariantStock = async (
+  id: string,
+  quantityChange: number,
+  connection?: any
+): Promise<boolean> => {
+  const db = (connection || pool) as typeof pool;
+  const [result] = await db.query<ResultSetHeader>(
+    `UPDATE product_variant SET stock = stock + ? WHERE id = ?`,
+    [quantityChange, id]
+  );
+  return result.affectedRows > 0;
+};
+
+// Reemplaza o inserta las variantes de un producto
+export const replaceProductVariants = async (
+  product_id: string,
+  variants: Array<{ id?: string; stock: number; variante1: string; variante2?: string | null; is_active?: boolean }>
+): Promise<void> => {
+  const db = pool;
+  // Primero eliminamos lógicamente las variantes existentes que no vengan en el payload?
+  // O podemos eliminarlas físicamente para mantenerlo simple en CMS:
+  await db.query(`DELETE FROM product_variant WHERE product_id = ?`, [product_id]);
+  
+  if (!variants || variants.length === 0) return;
+
+  const rows = variants.map(v => [
+    v.id || generateId(),
+    product_id,
+    v.stock,
+    v.variante1,
+    v.variante2 ?? null,
+    v.is_active === false ? 0 : 1
+  ]);
+
+  await db.query(
+    `INSERT INTO product_variant (id, product_id, stock, variante1, variante2, is_active) VALUES ?`,
+    [rows]
+  );
+};
+
 

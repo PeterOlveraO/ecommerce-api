@@ -25,6 +25,13 @@ const create_product_schema = z.object({
   display_order: z.number().int().min(0),
   featured: z.boolean().optional().default(false),
   category_ids: z.array(z.string().uuid()).optional(),
+  variants: z.array(z.object({
+    id: z.string().uuid().optional(),
+    stock: z.number().int().min(0),
+    variante1: z.string().min(1).max(50),
+    variante2: z.string().max(50).nullable().optional(),
+    is_active: z.boolean().optional()
+  })).optional(),
 }).refine(
   (data) => data.sale_price === undefined || data.sale_price < data.price,
   { message: 'El precio de oferta debe ser menor al precio regular', path: ['sale_price'] }
@@ -43,6 +50,13 @@ const update_product_schema = z.object({
   display_order: z.number().int().min(0).optional(),
   featured: z.boolean().optional(),
   category_ids: z.array(z.string().uuid()).optional(),
+  variants: z.array(z.object({
+    id: z.string().uuid().optional(),
+    stock: z.number().int().min(0),
+    variante1: z.string().min(1).max(50),
+    variante2: z.string().max(50).nullable().optional(),
+    is_active: z.boolean().optional()
+  })).optional(),
 });
 
 // GET /products — público

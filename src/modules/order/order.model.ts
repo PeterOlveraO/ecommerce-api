@@ -25,6 +25,7 @@ export interface OrderItem extends RowDataPacket {
   id: string;
   order_id: string;
   product_id: string;
+  variant_id: string | null;
   quantity: number;
   unit_price: number;
   line_total: number;
@@ -44,6 +45,7 @@ export interface ProductPrice extends RowDataPacket {
 // Tipo para crear un ítem de orden
 export interface CreateOrderItemInput {
   product_id: string;
+  variant_id?: string | null;
   quantity: number;
   unit_price: number;
   line_total: number;
@@ -103,7 +105,7 @@ export const findOrderById = async (id: string, connection?: any): Promise<ShopO
   if (!orders[0]) return null;
 
   const [items] = await db.query<OrderItem[]>(
-    `SELECT oi.id, oi.order_id, oi.product_id, oi.quantity, oi.unit_price, oi.line_total,
+    `SELECT oi.id, oi.order_id, oi.product_id, oi.variant_id, oi.quantity, oi.unit_price, oi.line_total,
             p.name as product_name
      FROM order_item oi
      LEFT JOIN product p ON oi.product_id = p.id
@@ -163,6 +165,7 @@ export const insertOrderItems = async (
     generateId(),
     order_id,
     item.product_id,
+    item.variant_id ?? null,
     item.quantity,
     item.unit_price,
     item.line_total,
@@ -170,7 +173,7 @@ export const insertOrderItems = async (
   const db = (connection || pool) as typeof pool;
   await db.query(
     `INSERT INTO order_item
-       (id, order_id, product_id, quantity, unit_price, line_total)
+       (id, order_id, product_id, variant_id, quantity, unit_price, line_total)
      VALUES ?`,
     [rows]
   );
