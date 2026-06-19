@@ -8,7 +8,7 @@ import { AppError } from '../../middlewares/error.middleware.js';
 export const create_header_image_schema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
   image_url: z.string().url('La URL de la imagen no es válida'),
-  link_url: z.string().url('La URL del enlace no es válida').nullable().optional(),
+  link_url: z.string().nullable().optional(),
   display_order: z.number().int().min(0, 'El orden debe ser un entero no negativo'),
 });
 
