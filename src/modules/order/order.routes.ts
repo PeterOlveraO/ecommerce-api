@@ -20,6 +20,7 @@ const create_order_schema = z.object({
     .array(
       z.object({
         product_id: z.string().uuid('product_id debe ser un UUID válido'),
+        variant_id: z.string().uuid('variant_id debe ser un UUID válido').optional(),
         quantity: z.number().int().positive('La cantidad debe ser un entero positivo'),
       })
     )
