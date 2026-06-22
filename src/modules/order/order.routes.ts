@@ -14,7 +14,7 @@ const router = Router();
 
 // Schema de validación para crear una orden
 const create_order_schema = z.object({
-  customer_id: z.string().uuid('customer_id debe ser un UUID válido'),
+  customer_id: z.string().uuid('customer_id debe ser un UUID válido').optional(),
   payment_method_id: z.string().uuid('payment_method_id debe ser un UUID válido'),
   items: z
     .array(

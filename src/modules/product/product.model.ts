@@ -315,25 +315,38 @@ export const replaceProductVariants = async (
   variants: Array<{ id?: string; stock: number; variante1: string; variante2?: string | null; is_active?: boolean }>
 ): Promise<void> => {
   const db = pool;
-  // Primero eliminamos lógicamente las variantes existentes que no vengan en el payload?
-  // O podemos eliminarlas físicamente para mantenerlo simple en CMS:
-  await db.query(`DELETE FROM product_variant WHERE product_id = ?`, [product_id]);
-  
-  if (!variants || variants.length === 0) return;
 
-  const rows = variants.map(v => [
-    v.id || generateId(),
-    product_id,
-    v.stock,
-    v.variante1,
-    v.variante2 ?? null,
-    v.is_active === false ? 0 : 1
-  ]);
+  if (!variants) variants = [];
 
-  await db.query(
-    `INSERT INTO product_variant (id, product_id, stock, variante1, variante2, is_active) VALUES ?`,
-    [rows]
+  const [existing] = await db.query<RowDataPacket[]>(
+    `SELECT id FROM product_variant WHERE product_id = ?`,
+    [product_id]
   );
+  const existingIds = existing.map((r: any) => r.id);
+  const incomingIds = variants.filter(v => v.id).map(v => v.id!);
+
+  // Eliminar físicamente las que ya no vienen
+  const idsToDelete = existingIds.filter((id: string) => !incomingIds.includes(id));
+  if (idsToDelete.length > 0) {
+    await db.query(`DELETE FROM product_variant WHERE id IN (?)`, [idsToDelete]);
+  }
+
+  for (const v of variants) {
+    if (v.id && existingIds.includes(v.id)) {
+      // Update
+      await db.query(
+        `UPDATE product_variant SET stock = ?, variante1 = ?, variante2 = ?, is_active = ? WHERE id = ?`,
+        [v.stock, v.variante1, v.variante2 ?? null, v.is_active === false ? 0 : 1, v.id]
+      );
+    } else {
+      // Insert
+      const newId = v.id || generateId();
+      await db.query(
+        `INSERT INTO product_variant (id, product_id, stock, variante1, variante2, is_active) VALUES (?, ?, ?, ?, ?, ?)`,
+        [newId, product_id, v.stock, v.variante1, v.variante2 ?? null, v.is_active === false ? 0 : 1]
+      );
+    }
+  }
 };
 
 
