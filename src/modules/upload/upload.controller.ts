@@ -7,8 +7,8 @@ export const uploadImage = (req: Request, res: Response) => {
     throw new AppError('No se proporcionó ninguna imagen en el campo "image".', 400);
   }
 
-  // Se devuelve la URL pública de la imagen
-  const imageUrl = `/uploads/${req.file.filename}`;
+  // Se devuelve la URL pública completa de la imagen
+  const imageUrl = `https://api.vapezone.com.mx/uploads/${req.file.filename}`;
 
   successResponse(res, { url: imageUrl }, 'Imagen subida exitosamente', 201);
 };

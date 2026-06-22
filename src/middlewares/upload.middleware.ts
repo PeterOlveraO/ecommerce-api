@@ -4,8 +4,8 @@ import fs from 'fs';
 import { generateId } from '../utils/uuid.js';
 import { AppError } from './error.middleware.js';
 
-// Asegurarse de que el directorio de subida exista
-const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+// Carpeta persistente fuera del proyecto (sobrevive a redeploys en Hostinger)
+const uploadDir = '/home/u989780646/uploads';
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
