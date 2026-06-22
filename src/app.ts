@@ -32,6 +32,7 @@ const allowed_origins = [
   "http://localhost:4321",
   // Dominio temporal de Hostinger (mientras el dominio personalizado propaga)
   "https://floralwhite-wombat-793465.hostingersite.com",
+  "https://lawngreen-weasel-529393.hostingersite.com",
 ];
 
 // Middlewares de seguridad y utilidad
@@ -42,7 +43,10 @@ app.use(
       // Permite peticiones sin origin (Postman, curl, server-to-server)
       if (!origin) return callback(null, true);
       // Permite desarrollo local dinámicamente sin importar el puerto
-      if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) {
+      if (
+        origin.startsWith("http://localhost:") ||
+        origin.startsWith("http://127.0.0.1:")
+      ) {
         return callback(null, true);
       }
       if (allowed_origins.includes(origin)) {
@@ -59,10 +63,7 @@ app.use(morgan("dev"));
 app.use(express.json());
 
 // Servir archivos estáticos desde la carpeta persistente (fuera del proyecto, sobrevive a redeploys)
-app.use(
-  "/uploads",
-  express.static("/home/u989780646/uploads"),
-);
+app.use("/uploads", express.static("/home/u989780646/uploads"));
 
 // Ruta de salud del servidor
 app.get("/health", (_req, res) => {
