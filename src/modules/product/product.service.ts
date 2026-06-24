@@ -8,6 +8,8 @@ import {
   softDeleteProduct,
   deleteProductCategories,
   insertProductCategories,
+  insertProductImages,
+  replaceProductImages,
   type CreateProductInput,
   type UpdateProductInput,
 } from './product.model.js';
@@ -49,15 +51,20 @@ export const getProductById = async (id: string) => {
   return product;
 };
 
-// Crea un producto y asocia las categorías indicadas
+// Crea un producto y asocia las categorías e imágenes secundarias indicadas
 export const createProduct = async (input: CreateProductInput) => {
-  const { category_ids, ...product_data } = input;
+  const { category_ids, image_urls, ...product_data } = input;
 
   const id = await insertProduct(product_data);
 
   // Inserta las asociaciones de categorías si se proporcionaron
   if (category_ids && category_ids.length > 0) {
     await insertProductCategories(id, category_ids);
+  }
+
+  // Inserta las imágenes secundarias de la galería si se proporcionaron
+  if (image_urls && image_urls.length > 0) {
+    await insertProductImages(id, image_urls);
   }
 
   if (input.variants) {
@@ -68,7 +75,7 @@ export const createProduct = async (input: CreateProductInput) => {
   return getProductById(id);
 };
 
-// Actualiza un producto; si se pasan category_ids, reemplaza todas las asociaciones
+// Actualiza un producto; si se pasan category_ids o image_urls, reemplaza todas sus asociaciones
 export const updateProductById = async (
   id: string,
   input: UpdateProductInput
@@ -76,7 +83,7 @@ export const updateProductById = async (
   // Verifica que el producto exista antes de actualizar
   await getProductById(id);
 
-  const { category_ids, ...product_data } = input;
+  const { category_ids, image_urls, ...product_data } = input;
 
   const updated = await updateProduct(id, product_data);
 
@@ -88,12 +95,17 @@ export const updateProductById = async (
     }
   }
 
+  // Reemplaza todas las imágenes secundarias si se envió el array
+  if (image_urls !== undefined) {
+    await replaceProductImages(id, image_urls);
+  }
+
   if (input.variants !== undefined) {
     const { replaceProductVariants } = await import('./product.model.js');
     await replaceProductVariants(id, input.variants);
   }
 
-  if (!updated && category_ids === undefined) {
+  if (!updated && category_ids === undefined && image_urls === undefined) {
     throw new AppError('No se proporcionaron campos para actualizar', 400);
   }
 
