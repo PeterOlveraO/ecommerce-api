@@ -2,6 +2,8 @@
 
 Esta guía detalla cómo funciona el servicio de almacenamiento de imágenes en la API y cómo interactuar con él desde el frontend (CMS o Tienda).
 
+---
+
 ## 1. El Endpoint de Subida
 
 Para subir cualquier imagen física al servidor (fotos de producto, banners, imágenes de cabecera), debes hacer una petición al endpoint unificado de carga.
@@ -22,70 +24,126 @@ Para subir cualquier imagen física al servidor (fotos de producto, banners, im�
 
 Cuando el administrador selecciona un archivo local en el CMS, debes envolverlo en un objeto `FormData` y enviarlo mediante `fetch` o tu cliente preferido (como axios).
 
-### Ejemplo de Integración en JavaScript:
+### Ejemplo — Subir una sola imagen:
 
 ```javascript
-// Supongamos que tienes este input en tu UI:
-// <input type="file" id="filePicker" accept="image/png, image/jpeg, image/webp" />
-
-async function handleImageUpload() {
-  const fileInput = document.getElementById('filePicker');
-  const file = fileInput.files[0];
-
-  if (!file) return alert("Selecciona una imagen");
-
-  // 1. Crear el objeto FormData
+async function uploadImage(file) {
   const formData = new FormData();
   // ⚠️ EL NOMBRE DEL CAMPO DEBE SER "image"
   formData.append('image', file);
 
-  try {
-    // 2. Hacer la petición POST
-    const response = await fetch('http://localhost:3000/upload', {
-      method: 'POST',
-      headers: {
-        // NOTA VITAL: ¡NO configures el 'Content-Type' manualmente!
-        // Al mandar un FormData, el navegador asigna automáticamente
-        // 'multipart/form-data' junto con el 'boundary' necesario.
-        'Authorization': `Bearer ${localStorage.getItem('token_admin')}`
-      },
-      body: formData
-    });
+  const response = await fetch('http://localhost:3000/upload', {
+    method: 'POST',
+    headers: {
+      // NOTA VITAL: ¡NO configures el 'Content-Type' manualmente!
+      // Al mandar un FormData, el navegador asigna automáticamente
+      // 'multipart/form-data' junto con el 'boundary' necesario.
+      'Authorization': `Bearer ${localStorage.getItem('token_admin')}`
+    },
+    body: formData
+  });
 
-    const data = await response.json();
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message);
 
-    if (response.ok) {
-      // 3. Capturar la URL relativa devuelta por el servidor
-      const imageUrl = data.data.url; // Ejemplo: "/uploads/ab3...9f1.jpg"
-      console.log('Imagen subida, guardada en:', imageUrl);
-      
-      // 4. (Siguiente Paso) 
-      // Ahora puedes enviar esta 'imageUrl' como string ('image_url')
-      // en tu petición POST/PUT hacia la creación de un /products o /categories.
-      
-    } else {
-      alert('Error del servidor: ' + data.message);
-    }
-  } catch (error) {
-    console.error('Error de red:', error);
-  }
+  return data.data.url; // Ejemplo: "/uploads/ab3...9f1.jpg"
 }
 ```
 
 ---
 
-## 3. Consumir/Visualizar las Imágenes
+## 3. Imágenes de Producto: Principal y Galería Secundaria
 
-Una vez que la imagen fue cargada exitosamente, se guarda en el backend en la carpeta estática `public/uploads`. 
+Los productos soportan **dos tipos de imágenes**:
 
-Si el endpoint de `upload` te devuelve `/uploads/foto.jpg` y lo guardaste así en la base de datos (por ejemplo, en el campo `image_url` de un producto), tu frontend simplemente tiene que concatenar la ruta raíz de la API para mostrarla:
+| Campo | Tabla | Descripción |
+|-------|-------|-------------|
+| `image_url` | `product.image_url` | **Imagen principal** (portada, thumbnail). Una sola URL. |
+| `image_urls` | `product_image` | **Galería secundaria**. Array de hasta 10 URLs ordenadas por `sort_order`. |
+
+### Flujo típico en el CMS para crear un producto con galería:
+
+```javascript
+async function createProductWithGallery(productData, mainImageFile, galleryFiles) {
+  // 1. Subir imagen principal
+  const mainUrl = await uploadImage(mainImageFile);
+
+  // 2. Subir cada imagen de la galería en paralelo
+  const galleryUrls = await Promise.all(
+    galleryFiles.map(file => uploadImage(file))
+  );
+
+  // 3. Crear el producto con ambos campos
+  const response = await fetch('http://localhost:3000/products', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('token_admin')}`
+    },
+    body: JSON.stringify({
+      ...productData,
+      image_url: mainUrl,        // Imagen principal (portada)
+      image_urls: galleryUrls,   // Galería secundaria (orden respetado)
+    })
+  });
+
+  return response.json();
+}
+```
+
+### Flujo para actualizar la galería de un producto existente:
+
+```javascript
+// Enviar image_urls reemplaza TODA la galería secundaria del producto.
+// Para borrar todas las imágenes secundarias, enviar un array vacío: image_urls: []
+
+await fetch(`http://localhost:3000/products/${productId}`, {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${localStorage.getItem('token_admin')}`
+  },
+  body: JSON.stringify({
+    image_urls: ['/uploads/img1.jpg', '/uploads/img2.jpg', '/uploads/img3.jpg']
+  })
+});
+```
+
+> **Nota:** Si no envías el campo `image_urls` en un PUT, la galería secundaria **no se modifica**.
+> Si envías `image_urls: []`, se **borran todas** las imágenes secundarias.
+
+---
+
+## 4. Consumir/Visualizar las Imágenes
+
+Una vez que la imagen fue cargada exitosamente, se guarda en la carpeta estática `public/uploads`.
+
+El endpoint `GET /products/:id` devuelve la siguiente estructura:
+
+```json
+{
+  "id": "...",
+  "name": "Producto Ejemplo",
+  "image_url": "/uploads/portada.jpg",
+  "images": [
+    "/uploads/galeria1.jpg",
+    "/uploads/galeria2.jpg",
+    "/uploads/galeria3.jpg"
+  ]
+}
+```
+
+Para mostrarlas en el frontend, concatena la URL base de la API:
 
 ```html
-<!-- Mostrando la imagen en el Frontend de la Tienda -->
-<img 
-  src="http://localhost:3000/uploads/foto.jpg" 
-  alt="Foto del Producto" 
-/>
+<!-- Imagen principal -->
+<img src="http://localhost:3000/uploads/portada.jpg" alt="Portada del Producto" />
+
+<!-- Galería secundaria -->
+<div class="gallery">
+  <img src="http://localhost:3000/uploads/galeria1.jpg" alt="Vista 1" />
+  <img src="http://localhost:3000/uploads/galeria2.jpg" alt="Vista 2" />
+</div>
 ```
 
 **Recomendación:** Ten una variable de entorno global en tu frontend (ej. `PUBLIC_API_URL="http://localhost:3000"`) y úsala como prefijo cada vez que vayas a imprimir una imagen.

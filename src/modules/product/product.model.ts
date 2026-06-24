@@ -2,7 +2,7 @@ import { pool } from '../../config/db.js';
 import { generateId } from '../../utils/uuid.js';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 
-// Tipo que representa un producto con sus categorías
+// Tipo que representa un producto con sus categorías e imágenes secundarias
 export interface Product extends RowDataPacket {
   id: string;
   name: string;
@@ -12,7 +12,8 @@ export interface Product extends RowDataPacket {
   sale_price: number | null;
   stock: number;
   details: unknown;
-  image_url: string | null;
+  image_url: string | null;    // Imagen principal (portada)
+  images?: string[];            // Imágenes secundarias de la galería
   display_order: number;
   is_active: boolean;
   featured: boolean;
@@ -28,7 +29,8 @@ export interface CreateProductInput {
   sale_price?: number;
   stock?: number;
   details?: unknown;
-  image_url?: string | null;
+  image_url?: string | null;   // Imagen principal
+  image_urls?: string[];        // Imágenes secundarias de la galería
   display_order: number;
   featured?: boolean;
   category_ids?: string[];
@@ -50,7 +52,8 @@ export interface UpdateProductInput {
   sale_price?: number;
   stock?: number;
   details?: unknown;
-  image_url?: string | null;
+  image_url?: string | null;   // Imagen principal
+  image_urls?: string[];        // Imágenes secundarias (reemplaza toda la galería)
   display_order?: number;
   featured?: boolean;
   category_ids?: string[];
@@ -140,7 +143,7 @@ export const countProducts = async (
   return rows[0].total;
 };
 
-// Obtiene un producto por ID junto con sus categorías y variantes
+// Obtiene un producto por ID junto con sus categorías, variantes e imágenes secundarias
 export const findProductById = async (id: string): Promise<Product | null> => {
   const [rows] = await pool.query<Product[]>(
     `SELECT
@@ -149,7 +152,12 @@ export const findProductById = async (id: string): Promise<Product | null> => {
        p.details, p.image_url, p.display_order, p.is_active, p.featured,
        JSON_ARRAYAGG(
          IF(c.id IS NOT NULL, JSON_OBJECT('id', c.id, 'name', c.name), NULL)
-       ) AS categories
+       ) AS categories,
+       (
+         SELECT JSON_ARRAYAGG(pi.url ORDER BY pi.sort_order ASC)
+         FROM product_image pi
+         WHERE pi.product_id = p.id
+       ) AS images
      FROM product p
      LEFT JOIN product_category pc ON pc.product_id = p.id
      LEFT JOIN category c ON c.id = pc.category_id
@@ -159,6 +167,12 @@ export const findProductById = async (id: string): Promise<Product | null> => {
   );
   const product = rows[0] ?? null;
   if (!product) return null;
+
+  // Normaliza el array de imágenes secundarias (puede llegar como string JSON desde MariaDB)
+  if (typeof product.images === 'string') {
+    product.images = JSON.parse(product.images);
+  }
+  product.images = (product.images as any[] | null)?.filter(Boolean) ?? [];
 
   const [variants] = await pool.query<RowDataPacket[]>(
     `SELECT id, stock, variante1, variante2, is_active FROM product_variant WHERE product_id = ?`,
@@ -350,3 +364,34 @@ export const replaceProductVariants = async (
 };
 
 
+// --- Product Images ---
+
+// Inserta imágenes secundarias de un producto respetando el orden recibido
+export const insertProductImages = async (
+  product_id: string,
+  urls: string[]
+): Promise<void> => {
+  if (urls.length === 0) return;
+  const rows = urls.map((url, index) => [generateId(), product_id, url, index]);
+  await pool.query(
+    `INSERT INTO product_image (id, product_id, url, sort_order) VALUES ?`,
+    [rows]
+  );
+};
+
+// Elimina todas las imágenes secundarias de un producto
+export const deleteProductImages = async (product_id: string): Promise<void> => {
+  await pool.query(
+    `DELETE FROM product_image WHERE product_id = ?`,
+    [product_id]
+  );
+};
+
+// Reemplaza todas las imágenes secundarias de un producto (borra e inserta)
+export const replaceProductImages = async (
+  product_id: string,
+  urls: string[]
+): Promise<void> => {
+  await deleteProductImages(product_id);
+  await insertProductImages(product_id, urls);
+};
