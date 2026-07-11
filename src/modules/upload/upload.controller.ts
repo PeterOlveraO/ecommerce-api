@@ -12,7 +12,7 @@ export const uploadImage = (req: Request, res: Response) => {
   }
 
   // Se construye la URL pública usando la base definida en .env (UPLOAD_BASE_URL)
-  const imageUrl = `${env.upload_base_url}/${req.file.filename}`;
+  const imageUrl = `${env.upload_base_url}/uploads/${req.file.filename}`;
 
   successResponse(res, { url: imageUrl }, "Imagen subida exitosamente", 201);
 };
