@@ -13,6 +13,8 @@ const required_vars = [
   'JWT_REFRESH_SECRET',
   'JWT_EXPIRES_IN',
   'JWT_REFRESH_EXPIRES_IN',
+  'UPLOAD_DIR',
+  'UPLOAD_BASE_URL',
 ];
 
 for (const var_name of required_vars) {
@@ -24,6 +26,8 @@ for (const var_name of required_vars) {
 export const env = {
   port: Number(process.env.PORT),
   node_env: process.env.NODE_ENV as string,
+  upload_dir: process.env.UPLOAD_DIR as string,
+  upload_base_url: process.env.UPLOAD_BASE_URL as string,
   db: {
     host: process.env.DB_HOST as string,
     port: Number(process.env.DB_PORT),

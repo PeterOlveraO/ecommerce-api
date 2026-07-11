@@ -1,9 +1,11 @@
 #basura
 node_modules/
 dist/
-
+public/
 #privado
 .env
+.env.production
+.env.development
 seeds.ts
 #IA
 .gemini/
