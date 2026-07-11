@@ -2,6 +2,7 @@ import express from "express";
 import helmet from "helmet";
 import cors from "cors";
 import morgan from "morgan";
+import { env } from "./config/env.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 import { authMiddleware } from "./middlewares/auth.middleware.js";
 import { validate } from "./middlewares/validate.middleware.js";
@@ -62,8 +63,8 @@ app.use(
 app.use(morgan("dev"));
 app.use(express.json());
 
-// Servir archivos estáticos desde la carpeta persistente (fuera del proyecto, sobrevive a redeploys)
-app.use("/uploads", express.static("/home/u989780646/uploads"));
+// Servir archivos estáticos desde la carpeta definida en .env (UPLOAD_DIR)
+app.use("/uploads", express.static(env.upload_dir));
 
 // Ruta de salud del servidor
 app.get("/health", (_req, res) => {

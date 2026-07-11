@@ -1,9 +1,12 @@
 #basura
 node_modules/
 dist/
-
+public/
+uploads/*.webp
 #privado
 .env
+.env.production
+.env.development
 seeds.ts
 #IA
 .gemini/

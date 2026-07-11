@@ -3,9 +3,10 @@ import path from 'path';
 import fs from 'fs';
 import { generateId } from '../utils/uuid.js';
 import { AppError } from './error.middleware.js';
+import { env } from '../config/env.js';
 
-// Carpeta persistente fuera del proyecto (sobrevive a redeploys en Hostinger)
-const uploadDir = '/home/u989780646/uploads';
+// Carpeta de uploads — la ruta se define en .env (UPLOAD_DIR) para soportar dev y producción
+const uploadDir = env.upload_dir;
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
